@@ -1,9 +1,11 @@
 package com.example.bloodbankapp_20bps1125
 
 import android.annotation.SuppressLint
+import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.widget.DatePicker
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -28,32 +30,48 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -64,6 +82,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bloodbankapp_20bps1125.ui.theme.BloodBankApp_20BPS1125Theme
+import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Date
 
 class HomeActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
@@ -82,19 +103,104 @@ class HomeActivity : ComponentActivity() {
     }
 }
 
+sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
+    object Home : Screen("home", "Home", Icons.Default.Home)
+    object ContactUs : Screen("contact_us", "Contact Us", Icons.Default.Phone)
+    object BookAppointment : Screen("book_appointment", "Book Appointment", Icons.Default.Send)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun App() {
-    CustomScaffold()
+    val screens = listOf(Screen.Home, Screen.ContactUs, Screen.BookAppointment)
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val selectedItem = remember { mutableStateOf(screens[0]) }
+    return(
+            ModalNavigationDrawer(
+                drawerState = drawerState,
+                drawerContent = {
+                    ModalDrawerSheet {
+                        Spacer(Modifier.height(12.dp))
+                        screens.forEach { item ->
+                            NavigationDrawerItem(
+                                icon = { Icon(item.icon, contentDescription = null) },
+                                label = { Text(item.title) },
+                                selected = item == selectedItem.value,
+                                onClick = {
+                                    scope.launch { drawerState.close() }
+                                    selectedItem.value = item
+                                },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                            )
+                        }
+                    }
+                },
+                content = {
+                    Scaffold(
+                        topBar = {
+                            TopAppBar(
+                                title = {
+                                    val context = LocalContext.current
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                    ) {
+                                        IconButton(onClick = { scope.launch { drawerState.open() }  }) {
+                                            Icon(
+                                                Icons.Filled.Menu,
+                                                contentDescription = "",
+                                                modifier = Modifier
+                                                    .size(30.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier)
+                                        Text(text = "Donate Blood")
+                                        Button(
+                                            onClick = {
+                                                context.startActivity(
+                                                    Intent(
+                                                        context,
+                                                        MainActivity::class.java
+                                                    )
+                                                )
+                                            }, colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color.White,
+                                                contentColor = Color.Red
+                                            )
+                                        ) {
+                                            Text(text = "Logout")
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.drawBehind {
+                                    drawLine(
+                                        Color.Red,
+                                        Offset(0f, size.height),
+                                        Offset(size.width, size.height),
+                                        5f
+                                    )
+                                }
+                            )
+                        },
+                        bottomBar = { CustomBottomBar() },
+                        content = { pad -> MainContent(pad) },
+                    )
+                }
+            )
+            )
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CustomScaffold() {
     Scaffold(topBar = { CustomTopBar() },
         bottomBar = { CustomBottomBar() },
-        content = { pad -> MainContent(pad) }
+        content = { pad -> MainContent(pad) },
     )
 }
 
@@ -111,7 +217,7 @@ fun CustomTopBar() {
                     .fillMaxWidth()
             ) {
                 Icon(
-                    Icons.Filled.AccountCircle, contentDescription = "", modifier = Modifier
+                    Icons.Filled.Menu, contentDescription = "", modifier = Modifier
                         .size(30.dp)
                 )
                 Spacer(modifier = Modifier)
@@ -169,6 +275,29 @@ fun CustomBottomBar() {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MainContent(padding: PaddingValues) {
+
+    val mContext = LocalContext.current
+
+    // Declaring integer values
+    // for year, month and day
+    val mYear: Int
+    val mMonth: Int
+    val mDay: Int
+
+    // Initializing a Calendar
+    val mCalendar = Calendar.getInstance()
+
+    // Fetching current year, month and day
+    mYear = mCalendar.get(Calendar.YEAR)
+    mMonth = mCalendar.get(Calendar.MONTH)
+    mDay = mCalendar.get(Calendar.DAY_OF_MONTH)
+
+    mCalendar.time = Date()
+
+    // Declaring a string value to
+    // store date in string format
+    val mDate = remember { mutableStateOf("") }
+
     val primaryTextColor = remember {
         mutableStateOf(Color(115, 115, 115))
     }
@@ -185,6 +314,13 @@ fun MainContent(padding: PaddingValues) {
     val fullName = remember {
         mutableStateOf(TextFieldValue())
     }
+
+    val mDatePickerDialog = DatePickerDialog(
+        mContext,
+        { _: DatePicker, mYear: Int, mMonth: Int, mDayOfMonth: Int ->
+            mDate.value = "$mDayOfMonth/${mMonth+1}/$mYear"
+        }, mYear, mMonth, mDay
+    )
 
     val email = remember {
         mutableStateOf(TextFieldValue())
@@ -275,6 +411,12 @@ fun MainContent(padding: PaddingValues) {
                 textColor = tertiaryTextColor.value,
                 conColor = textFieldColor.value
             )
+            Spacer(modifier = Modifier.height(40.dp))
+            Button(onClick = {
+                mDatePickerDialog.show()
+            }) {
+                Text(text = "Open Date Picker", color = Color.White)
+            }
             Spacer(modifier = Modifier.height(40.dp))
             val context= LocalContext.current
             CustomButton(
